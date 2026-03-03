@@ -1,0 +1,137 @@
+﻿<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Finanzas - Sistema Donaciones</title>
+    <link rel="stylesheet" th:href="@{/css/app.css}">
+    <script src="https://unpkg.com/htmx.org@1.9.12"></script>
+    <script th:src="@{/js/app.js}" defer></script>
+</head>
+<body>
+<div class="dashboard-shell">
+    <aside class="sidebar">
+        <div><h2>Donaciones</h2><p>Sistema de Gestion</p></div>
+        <div class="user-box"><strong th:text="${usuarioNombre}"></strong><span th:text="${usuarioRol}"></span></div>
+        <ul class="menu">
+            <li><a th:href="@{/home}">Dashboard</a></li>
+            <li><a th:href="@{/roles}">Roles y Permisos</a></li>
+            <li><a th:href="@{/catalogos}">Catalogos</a></li>
+            <li><a th:href="@{/donaciones}">Donaciones</a></li>
+            <li><a th:href="@{/comunidades}">Comunidades</a></li>
+            <li><a th:href="@{/instituciones}">Instituciones</a></li>
+            <li><a th:href="@{/voluntarios}">Voluntarios</a></li>
+            <li><a th:href="@{/campanias}">Campanias</a></li>
+            <li><a th:href="@{/entregas}">Entregas</a></li>
+            <li class="active"><a th:href="@{/finanzas}">Finanzas</a></li>
+        </ul>
+        <a class="logout" th:href="@{/logout}">Cerrar Sesion</a>
+    </aside>
+
+    <main class="main">
+        <p th:if="${flashMessage}" class="flash" th:classappend="${flashError} ? ' flash-error' : ' flash-ok'" th:text="${flashMessage}"></p>
+
+        <div class="top-title">
+            <div>
+                <h1>Gestion Financiera</h1>
+                <p class="muted">Control del dinero recaudado, entregado y disponible</p>
+                <p class="muted">Orden campanias: <strong th:text="${ordenCampania}"></strong> | Orden comunidades: <strong th:text="${ordenComunidad}"></strong></p>
+                <p class="muted">Fecha reporte: <strong th:text="${fechaReporte}"></strong> | Hora reporte: <strong th:text="${horaReporte}"></strong></p>
+            </div>
+            <div class="top-actions">
+                <a class="btn-new btn-alt" th:href="@{/finanzas/excel(id_campania=${idCampania},id_comunidad=${idComunidad})}">Descargar Excel</a>
+            </div>
+        </div>
+
+        <form method="get" th:action="@{/finanzas}" class="toolbar">
+            <select name="id_campania">
+                <option value="">Campania: Todas</option>
+                <option th:each="c : ${campanias}" th:value="${c.idCampania}" th:text="${c.nombre}"
+                        th:selected="${idCampania != null and idCampania == c.idCampania}"></option>
+            </select>
+            <select name="id_comunidad">
+                <option value="">Comunidad: Todas</option>
+                <option th:each="c : ${comunidades}" th:value="${c.idComunidad}" th:text="${c.nombre}"
+                        th:selected="${idComunidad != null and idComunidad == c.idComunidad}"></option>
+            </select>
+            <button type="submit">Filtrar</button>
+            <a class="btn-cancel" th:href="@{/finanzas}">Limpiar</a>
+        </form>
+
+        <section class="stats finance-stats">
+            <article class="stat"><h3>Total Recaudado</h3><strong th:text="${'S/ ' + #numbers.formatDecimal(totalRecaudado, 1, 'COMMA', 2, 'POINT')}">S/ 0.00</strong><small th:text="${'Ultima donacion: ' + ultimaDonacion}">Ultima donacion: sin registro</small></article>
+            <article class="stat"><h3>Total Entregado</h3><strong th:text="${'S/ ' + #numbers.formatDecimal(totalEntregado, 1, 'COMMA', 2, 'POINT')}">S/ 0.00</strong><small th:text="${'Ultima entrega: ' + ultimaEntrega}">Ultima entrega: sin registro</small></article>
+            <article class="stat"><h3>Saldo Disponible</h3><strong th:text="${'S/ ' + #numbers.formatDecimal(saldoDisponible, 1, 'COMMA', 2, 'POINT')}">S/ 0.00</strong><small><span th:text="${totalDonaciones}"></span> donaciones - <span th:text="${totalEntregas}"></span> entregas</small></article>
+        </section>
+
+        <section class="finance-grid">
+            <article class="panel">
+                <h3>Resumen por Campania</h3>
+                <div class="table-wrap">
+                    <table class="table-fin">
+                        <thead>
+                        <tr>
+                            <th>Orden</th>
+                            <th>Campania</th>
+                            <th>Meta</th>
+                            <th>Recaudado</th>
+                            <th>Saldo</th>
+                            <th>Donaciones</th>
+                            <th>Ult. donacion</th>
+                            <th>Ult. entrega</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        <tr th:if="${porCampania == null or #lists.isEmpty(porCampania)}"><td colspan="8" class="muted">No hay datos de campanias.</td></tr>
+                        <tr th:each="row, st : ${porCampania}">
+                            <td th:text="${st.count}"></td>
+                            <td th:text="${row[1]}"></td>
+                            <td th:text="${'S/ ' + #numbers.formatDecimal(row[2], 1, 'COMMA', 2, 'POINT')}"></td>
+                            <td th:text="${'S/ ' + #numbers.formatDecimal(row[3], 1, 'COMMA', 2, 'POINT')}"></td>
+                            <td th:text="${'S/ ' + #numbers.formatDecimal(row[4], 1, 'COMMA', 2, 'POINT')}"></td>
+                            <td th:text="${row[5]}"></td>
+                            <td th:text="${row[6] != null ? #dates.format(row[6], 'dd/MM/yyyy HH:mm') : #dates.format(fechaReporteDateTime, 'dd/MM/yyyy HH:mm')}"></td>
+                            <td th:text="${row[7] != null ? #dates.format(row[7], 'dd/MM/yyyy HH:mm') : #dates.format(fechaReporteDateTime, 'dd/MM/yyyy HH:mm')}"></td>
+                        </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </article>
+
+            <article class="panel">
+                <h3>Resumen por Comunidad</h3>
+                <div class="table-wrap">
+                    <table class="table-fin">
+                        <thead>
+                        <tr>
+                            <th>Orden</th>
+                            <th>Comunidad</th>
+                            <th>Beneficiarios</th>
+                            <th>Entregas</th>
+                            <th>Completadas</th>
+                            <th>Monto recibido</th>
+                            <th>Ult. programada</th>
+                            <th>Ult. entrega</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        <tr th:if="${porComunidad == null or #lists.isEmpty(porComunidad)}"><td colspan="8" class="muted">No hay datos de comunidades.</td></tr>
+                        <tr th:each="row, st : ${porComunidad}">
+                            <td th:text="${st.count}"></td>
+                            <td th:text="${row[1]}"></td>
+                            <td th:text="${row[2]}"></td>
+                            <td th:text="${row[3]}"></td>
+                            <td th:text="${row[4]}"></td>
+                            <td th:text="${'S/ ' + #numbers.formatDecimal(row[5], 1, 'COMMA', 2, 'POINT')}"></td>
+                            <td th:text="${row[6] != null ? #dates.format(row[6], 'dd/MM/yyyy HH:mm') : #dates.format(fechaReporteDateTime, 'dd/MM/yyyy HH:mm')}"></td>
+                            <td th:text="${row[7] != null ? #dates.format(row[7], 'dd/MM/yyyy HH:mm') : #dates.format(fechaReporteDateTime, 'dd/MM/yyyy HH:mm')}"></td>
+                        </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </article>
+        </section>
+    </main>
+</div>
+</body>
+</html>

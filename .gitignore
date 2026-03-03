@@ -1,0 +1,7 @@
+target/
+*.log
+*.tmp
+.classpath
+.project
+.settings/
+tmp_*.jsh
